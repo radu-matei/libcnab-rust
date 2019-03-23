@@ -1,11 +1,12 @@
 [package]
 name = "libcnab"
 version = "0.1.0"
-authors = ["Matt Butcher <matt.butcher@microsoft.com>"]
+authors = ["Matt Butcher <matt.butcher@microsoft.com>", "Radu M <radu.matei@microsoft.com>"]
 edition = "2018"
 
 [dependencies]
-serde = "1.0"
-serde_derive = "1.0"
-serde_json = "1.0"
+canonical_json = { git = "https://github.com/radu-matei/canonical_json" }
+serde = "0.8"
+serde_derive = "0.8"
+serde_json = "0.8"
 spectral = "0.6"
