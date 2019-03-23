@@ -2,6 +2,8 @@ use canonical_json::error::Error::Syntax;
 use canonical_json::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::fs::File;
+use std::path::Path;
 
 /// Bundle implements a CNAB bundle descriptor
 ///
@@ -22,7 +24,7 @@ pub struct Bundle {
     /// The list of configurable credentials.
     ///
     /// Credentials are injected into the bundle's invocation image at startup time.
-    pub credentials: Option<Vec<Credential>>,
+    pub credentials: Option<HashMap<String, Credential>>,
     /// This field allows for additional data to described in the bundle.
     ///
     /// This data should be stored in key/value pairs, where the value is undefined by
@@ -73,12 +75,11 @@ impl Bundle {
                     // for now, we accept non-canonical JSON as input
                     // TODO - Radu M - check other error types generated because JSON is not canonical
                     Error::Syntax(SyntaxError::UnexpectedWhitespace, _, _) => {
-                        println!("UNEXPECTED WHITESPACE!");
                         let b: Result<Bundle, serde_json::Error> = serde_json::from_str(json_data);
                         match b {
                             Ok(b) => return Ok(b),
                             Err(err) => return Err(Error::Syntax(
-                                SyntaxError::Custom("cannot deserialize".to_string()),
+                                SyntaxError::Custom(format!("cannot deserialize: {}", err).to_string()),
                                 0,
                                 0,
                             )),
@@ -91,6 +92,34 @@ impl Bundle {
         }
     }
 
+    pub fn from_file(file_path: &str) -> Result<Bundle, Error> {
+        let file = File::open(Path::new(&file_path)).expect("file not found");
+        let res: Result<Bundle, Error> = canonical_json::from_reader(file);
+        match res {
+            Ok(b) => Ok(b),
+            Err(err) => {
+                match err {
+                    // the canonical JSON parser errors out if the input JSON is not canonical
+                    // for now, we accept non-canonical JSON as input
+                    // TODO - Radu M - check other error types generated because JSON is not canonical
+                    Error::Syntax(SyntaxError::UnexpectedWhitespace, _, _) => {
+                        let file = File::open(Path::new(&file_path)).expect("file not found");
+                        let b: Result<Bundle, serde_json::Error> = serde_json::from_reader(file);
+                        match b {
+                            Ok(b) => return Ok(b),
+                            Err(err) => return Err(Error::Syntax(
+                                SyntaxError::Custom(format!("cannot deserialize: {}", err).to_string()),
+                                0,
+                                0,
+                            )),
+                        };
+                    }
+                    _ => (),
+                }
+                Err(err)
+            }
+        }
+    }
     // TODO - Radu M - this returns canonical_json::Error
     // consider returning either serde_json::Error, or a plain error
     pub fn to_string(&self) -> Result<String, Error> {
