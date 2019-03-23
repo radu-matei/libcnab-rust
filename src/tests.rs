@@ -1,6 +1,9 @@
-extern crate spectral;
-
 use crate::cnab::Bundle;
+#[macro_use]
+use serde::*;
+#[macro_use]
+use serde_derive::*;
+#[macro_use]
 use serde_json::*;
 use spectral::prelude::*;
 
@@ -131,12 +134,12 @@ fn test_bundle_parameters() {
     let path = &dest.path;
     assert_that(path).is_equal_to(&Some("/path/to/abc".to_string()));
 
-    let abc = json!("abc");
+    let abc = serde_json::Value::String("abc".to_string());
     let dv = &arg3.unwrap().default_value;
     assert_that(dv).is_equal_to(&Some(abc));
 
     let allowed = &arg3.unwrap().allowed_values;
-    assert_that(allowed).is_equal_to(&Some(vec![json!("a"), json!("ab"), json!("abc")]));
+    assert_that(allowed).is_equal_to(&Some(vec![serde_json::Value::String("a".to_string()), serde_json::Value::String("ab".to_string()), serde_json::Value::String("abc".to_string())]));
 
     assert_that(&arg3.as_ref().unwrap().min_length.unwrap()).is_equal_to(1);
     assert_that(&arg3.as_ref().unwrap().max_length.unwrap()).is_equal_to(5);
@@ -146,7 +149,8 @@ fn test_bundle_parameters() {
     let meta = &arg3.unwrap().metadata;
     assert_that(&meta.is_some()).is_equal_to(true);
 
-    assert_that(&meta.as_ref().unwrap().description.as_ref().unwrap()).is_equal_to(&"a parameter".to_string());
+    assert_that(&meta.as_ref().unwrap().description.as_ref().unwrap())
+        .is_equal_to(&"a parameter".to_string());
 
     let apply_to = &arg3.unwrap().apply_to;
     assert_that(apply_to).is_equal_to(&Some(vec!["uninstall".to_string()]));
@@ -195,4 +199,15 @@ fn test_bundle_images() {
     assert_that(&bun.schema_version).is_equal_to("1.0-WD".to_string());
     assert_that(&bun.version).is_equal_to("1.0.0".to_string());
     assert_that(&bun.invocation_images.len()).is_equal_to(&1);
+}
+
+#[test]
+fn test_bundle_deserialize() {
+    let bun = Bundle::from_file("testdata/bundle.json").unwrap();
+
+    assert_that(&bun.name).is_equal_to("helloworld".to_string());
+    assert_that(&bun.schema_version).is_equal_to("v1.0.0-WD".to_string());
+    assert_that(&bun.version).is_equal_to("0.1.2".to_string());
+    assert_that(&bun.maintainers.unwrap().len()).is_equal_to(&1);
+    assert_that(&bun.custom.unwrap().len()).is_equal_to(&2);
 }
